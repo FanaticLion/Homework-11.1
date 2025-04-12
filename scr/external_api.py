@@ -1,28 +1,38 @@
 import requests
-def convert_currency_to_rub(transaction):
+from typing import Dict, Union
+
+API_KEY = "7pKg6vOlC07cqRKmLl9RlPEUXgoXC7Or"
+BASE_URL = "https://api.apilayer.com/exchangerates_data/latest"
+
+
+def convert_currency_to_rub(transaction: Dict[str, Union[str, float]]) -> float:
     """
-    Конвертирует сумму транзакции в рубли, если валюта указана как USD или EUR.
+    Конвертирует сумму транзакции в рубли, используя текущий курс валют.
 
     :param transaction: Словарь с данными о транзакции (например, {'amount': 100, 'currency': 'USD'}).
-    :return: Сумма транзакции в рублях (тип float).
+    :return: Сумма транзакции в рублях (float). Если валюта не USD/EUR или API недоступно, возвращает исходную сумму.
     """
-    amount = transaction.get('amount', 0)
-    currency = transaction.get('currency', '').upper()
+    amount = float(transaction.get("amount", 0))
+    currency = transaction.get("currency", "").upper()
 
-    if currency not in ['USD', 'EUR']:
-        # Если валюта уже в рублях или неизвестна, возвращаем сумму без изменений
-        return float(amount)
+    # Если валюта уже в рублях или неизвестна, возвращаем сумму без изменений
+    if currency not in ["USD", "EUR"]:
+        return amount
 
-    # Получение текущего курса соответствующей валюты
+    # Запрос к API для получения курса
     try:
-        response = requests.get(f"https://api.exchangerate-api.com/v4/latest/{currency}")
-        if response.status_code == 200:
-            rates = response.json().get('rates', {})
-            rub_rate = rates.get('RUB', 1)  # Получаем курс RUB, если он есть
-            return float(amount) * rub_rate
-        else:
-            print(f"Не удалось получить курс для {currency}. Статус: {response.status_code}")
-            return 0.0
-    except requests.RequestException as e:
-        print(f"Ошибка при соединении с API: {e}")
-        return 0.0
+        response = requests.get(
+            BASE_URL,
+            params={"base": currency, "symbols": "RUB"},
+            headers={"apikey": API_KEY},
+            timeout=5
+        )
+        response.raise_for_status()  # Проверка на ошибки HTTP
+
+        data = response.json()
+        rub_rate = data.get("rates", {}).get("RUB", 1.0)
+        return amount * rub_rate
+
+    except (requests.RequestException, KeyError) as e:
+        print(f"Ошибка при конвертации валюты: {e}")
+        return amount  # Возвращаем исходную сумму при ошибке
