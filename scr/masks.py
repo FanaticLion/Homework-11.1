@@ -1,23 +1,38 @@
 import logging
+from pathlib import Path
 from typing import Union
 
+
 # Настройка логгера для модуля masks
-masks_logger = logging.getLogger('masks')
-masks_logger.setLevel(logging.DEBUG)  # Уровень не ниже DEBUG
+def setup_masks_logger():
+    """Конфигурация логгера для модуля masks"""
+    # Создаем папку logs, если её нет
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
 
-# Создаем file handler
-file_handler = logging.FileHandler('masks.log', encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
+    logger = logging.getLogger('masks')
+    logger.setLevel(logging.DEBUG)  # Уровень не ниже DEBUG
 
-# Создаем formatter
-file_formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-file_handler.setFormatter(file_formatter)
+    # Очищаем существующие обработчики
+    if logger.handlers:
+        logger.handlers.clear()
 
-# Добавляем handler к логгеру
-masks_logger.addHandler(file_handler)
+    # Настраиваем файловый обработчик
+    handler = logging.FileHandler(
+        filename=logs_dir / "masks.log",
+        mode='w',
+        encoding='utf-8'
+    )
+    handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    ))
+    logger.addHandler(handler)
+    return logger
+
+
+# Инициализация логгера
+masks_logger = setup_masks_logger()
 
 
 def get_mask_card_number(card_number: Union[str, int]) -> str:
@@ -54,11 +69,8 @@ def get_mask_card_number(card_number: Union[str, int]) -> str:
         masks_logger.info(f"Успешно сформирована маска для карты: {masked_number}")
         return masked_number
 
-
-    except Exception as card_error:  # Уникальное имя
-
+    except Exception as card_error:
         masks_logger.critical(f"Критическая ошибка при обработке карты: {str(card_error)}")
-
         raise
 
 
@@ -99,20 +111,14 @@ def get_mask_account(account_number: str) -> str:
             raise ValueError(error_msg)
 
         # Формирование маски
-        if len(account_number) <= 18:
-            masked_account = "**" + account_number[-4:]
-        else:
-            masked_account = "**" + account_number[-6:]
-
+        masked_account = "**" + (account_number[-4:] if len(account_number) <= 18 else account_number[-6:])
         masks_logger.info(f"Успешно сформирована маска для счёта: {masked_account}")
         return masked_account
 
-
-    except Exception as account_error:  # Уникальное имя
-
+    except Exception as account_error:
         masks_logger.critical(f"Критическая ошибка при обработке счёта: {str(account_error)}")
-
         raise
+
 
 # Пример использования
 if __name__ == "__main__":
