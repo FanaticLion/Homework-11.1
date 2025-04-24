@@ -2,24 +2,37 @@ import json
 from typing import List, Dict, Any
 import os
 import logging
+from pathlib import Path
 
-#Настройка логгера для модуля utils
+# Создаем папку logs, если её нет
+logs_dir = Path("logs")
+logs_dir.mkdir(exist_ok=True)
+
+# Настройка логгера для модуля utils
 utils_logger = logging.getLogger('utils')
-utils_logger.setLevel(logging.DEBUG)  # Уровень не ниже DEBUG
+utils_logger.setLevel(logging.DEBUG)
 
-# Создаем file handler
-file_handler = logging.FileHandler('utils.log', encoding='utf-8')
+# Удаляем старые обработчики, если они есть
+utils_logger.handlers.clear()
+
+# Создаем file handler с перезаписью файла при каждом запуске
+file_handler = logging.FileHandler(
+    filename=logs_dir / "utils.log",
+    mode='w',  # 'w' для перезаписи
+    encoding='utf-8'
+)
 file_handler.setLevel(logging.DEBUG)
 
-# Создаем formatter
-file_formatter = logging.Formatter(
+# Форматтер для записи логов
+formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-file_handler.setFormatter(file_formatter)
+file_handler.setFormatter(formatter)
 
 # Добавляем handler к логгеру
 utils_logger.addHandler(file_handler)
+
 
 def load_transactions(file_path: str) -> List[Dict[str, Any]]:
     """
@@ -29,6 +42,8 @@ def load_transactions(file_path: str) -> List[Dict[str, Any]]:
     :return: Список словарей с данными о транзакциях.
     """
     try:
+        utils_logger.debug(f"Попытка загрузить файл: {file_path}")
+
         # Проверяем, существует ли файл
         if not os.path.exists(file_path):
             utils_logger.warning(f"Файл не найден: {file_path}")
@@ -41,7 +56,7 @@ def load_transactions(file_path: str) -> List[Dict[str, Any]]:
 
         # Проверяем, что данные являются списком
         if isinstance(data, list):
-            utils_logger.debug(f"Успешно загружено {len(data)} транзакций")
+            utils_logger.info(f"Успешно загружено {len(data)} транзакций")
             return data
         else:
             utils_logger.warning("Файл не содержит список транзакций")
@@ -57,10 +72,8 @@ def load_transactions(file_path: str) -> List[Dict[str, Any]]:
         utils_logger.error(f"Неожиданная ошибка при загрузке файла {file_path}: {str(e)}")
         return []
 
+
 # Пример использования:
 if __name__ == "__main__":
-    transactions = load_transactions("../data/operations.json")
+    transactions = load_transactions('../data/operations.json')
     print(transactions)
-
-
-
