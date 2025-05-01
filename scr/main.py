@@ -1,60 +1,69 @@
 import json
-from typing import List, Dict, Any
-from collections import defaultdict
-
-
-def count_transactions(transactions: List[Dict[str, Any]],
-                       categories: List[str]) -> Dict[str, int]:
-    """
-    Подсчитывает количество операций по заданным категориям.
-
-    :param transactions: Список словарей с транзакциями
-    :param categories: Список интересующих категорий
-    :return: Словарь {категория: количество}
-    """
-    result = defaultdict(int)
-
-    for operation in transactions:
-        if 'description' in operation and operation['description'] in categories:
-            result[operation['description']] += 1
-
-    return dict(result)
+import csv
+import openpyxl  # используется для load_xlsx()
 
 
 def main():
-    """Основная функция программы"""
-    print("Анализатор банковских операций")
-    print("=" * 30)
+    print("""Привет! Добро пожаловать в программу работы с банковскими транзакциями.
+Выберите необходимый пункт меню:
+1. Получить информацию о транзакциях из JSON-файла
+2. Получить информацию о транзакциях из CSV-файла
+3. Получить информацию о транзакциях из XLSX-файла""")
+
+    while True:
+        choice = input("Пользователь: ").strip()
+
+        if choice in ("1", "2", "3"):
+            break
+        print("Неверный ввод. Пожалуйста, выберите 1, 2 или 3.")
+
+    file_path = input("Введите путь к файлу: ")
 
     try:
-        # Загрузка данных из файла
-        with open('operations.json', 'r', encoding='utf-8') as f:
-            all_transactions = json.load(f)
+        if choice == "1":
+            transactions = load_json(file_path)
+        elif choice == "2":
+            transactions = load_csv(file_path)
+        else:
+            transactions = load_xlsx(file_path)
 
-        if not isinstance(all_transactions, list):
-            print("Ошибка: файл должен содержать список операций")
-            return
+        display_transactions(transactions)
 
-        # Пример использования
-        interesting_categories = [
-            'Перевод со счета на счет',
-            'Открытие вклада'
-        ]
-
-        result = count_transactions(all_transactions, interesting_categories)
-
-        print("\nРезультат подсчета операций:")
-        for category, count in result.items():
-            print(f"{category}: {count}")
-
-        print("\nВсего операций:", len(all_transactions))
-
-    except FileNotFoundError:
-        print("Ошибка: файл operations.json не найден")
-    except json.JSONDecodeError:
-        print("Ошибка: файл содержит некорректные JSON-данные")
     except Exception as e:
-        print(f"Неожиданная ошибка: {str(e)}")
+        print(f"Ошибка: {e}")
+
+
+def load_json(file_path):
+    """Загрузка транзакций из JSON"""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def load_csv(file_path):
+    """Загрузка транзакций из CSV"""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return list(csv.DictReader(f))
+
+
+def load_xlsx(file_path):
+    """Загрузка транзакций из Excel"""
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb.active
+    transactions = []
+
+    headers = [cell.value for cell in ws[1]]
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        transactions.append(dict(zip(headers, row)))
+
+    return transactions
+
+
+def display_transactions(transactions):
+    """Вывод транзакций в удобном формате"""
+    print("\nСписок транзакций:")
+    for i, tx in enumerate(transactions, 1):
+        print(f"{i}. {tx.get('description', 'Без описания')} - {tx.get('amount', 0)} руб.")
 
 
 if __name__ == "__main__":
