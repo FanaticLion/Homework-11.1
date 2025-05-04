@@ -1,7 +1,7 @@
-import json
-import csv
-import openpyxl  # используется для load_xlsx()
-
+from file_handlers import FileHandler
+from processing import process_transactions
+from utils import format_transaction
+import sys
 
 def main():
     print("""Привет! Добро пожаловать в программу работы с банковскими транзакциями.
@@ -12,7 +12,6 @@ def main():
 
     while True:
         choice = input("Пользователь: ").strip()
-
         if choice in ("1", "2", "3"):
             break
         print("Неверный ввод. Пожалуйста, выберите 1, 2 или 3.")
@@ -20,51 +19,27 @@ def main():
     file_path = input("Введите путь к файлу: ")
 
     try:
+        handler = FileHandler()
         if choice == "1":
-            transactions = load_json(file_path)
+            transactions = handler.load_json(file_path)
         elif choice == "2":
-            transactions = load_csv(file_path)
+            transactions = handler.load_csv(file_path)
         else:
-            transactions = load_xlsx(file_path)
+            transactions = handler.load_xlsx(file_path)
 
-        display_transactions(transactions)
+        result = process_transactions(transactions)
+        display_transactions(result['transactions'])
+        print(f"\nИтого: {len(result['transactions'])} транзакций на сумму {result['total_amount']:.2f} руб.")
 
     except Exception as e:
         print(f"Ошибка: {e}")
-
-
-def load_json(file_path):
-    """Загрузка транзакций из JSON"""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def load_csv(file_path):
-    """Загрузка транзакций из CSV"""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return list(csv.DictReader(f))
-
-
-def load_xlsx(file_path):
-    """Загрузка транзакций из Excel"""
-    wb = openpyxl.load_workbook(file_path)
-    ws = wb.active
-    transactions = []
-
-    headers = [cell.value for cell in ws[1]]
-
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        transactions.append(dict(zip(headers, row)))
-
-    return transactions
-
+        sys.exit(1)
 
 def display_transactions(transactions):
-    """Вывод транзакций в удобном формате"""
     print("\nСписок транзакций:")
     for i, tx in enumerate(transactions, 1):
-        print(f"{i}. {tx.get('description', 'Без описания')} - {tx.get('amount', 0)} руб.")
-
+        formatted = format_transaction(tx)
+        print(f"{i}. {formatted['date']} - {formatted['description']}: {formatted['amount']}")
 
 if __name__ == "__main__":
     main()
